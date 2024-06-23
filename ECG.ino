@@ -261,12 +261,18 @@ unsigned int Average_and_Scaling()
 {
   unsigned int Ave = 0;
   unsigned int Sum = 0;
+  float Anzahl_Messungen = 0.0;
+  int Anfang_Messung = micros();
 
 
-  for(int j = 0; j <= AVERAGE; j++)
+  while(micros() <= Anfang_Messung + 6000)
+  {
     Sum = Sum + analogRead(ECG_OUTPUT_SIGNAL);                    // Take the Sum of AVERAGE readings
+    Anzahl_Messungen++;
+  }
     
-  Ave = Sum / AVERAGE;                                                // Take the Average of this Sum
+  if(Anzahl_Messungen != 0)
+    Ave = Sum / Anzahl_Messungen;                                                // Take the Average of this Sum
 
 
   return Ave;                                    // Invert the scaling, for the display        
