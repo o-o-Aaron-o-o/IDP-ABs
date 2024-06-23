@@ -46,15 +46,32 @@ void loop_oxi()
   static int ArrayFuellung = 0;                                          //Variabe, die zählt wie weit die Zeichen-arrays aufgefüllt sind                                          
   static int BpmFlag = 0;                                                //Variable, die bei der Peakdetection hilft
 
+
+  float letztes_DC_IR = 0.0, letztes_DC_R = 0.0;                                  
+  float letztes_AC_IR = 0.0, letztes_AC_R = 0.0;
+
+
+  bool Flag_Sauerstoff_OK = false;
+
+
+
   static char SauerstoffsaettigungsBuchstaben[50] = {0};                 //Array, womit die SpO2- und Bpm-Daten auf dem Display ausgegeben werden  
+
+
 
 
 
   int IR_Messung = Pulsoxi.getIR();                                      //Erfassen des Oxi-Infrarot-Signals
 
+  letztes_DC_IR = DC_IR;
+
   DC_IR = (1 - GLATTUNG_IR) * DC_IR + GLATTUNG_IR * IR_Messung;          //Berechnen des DC-Wertes / Mittelwertes des Infrarot-Signals des Oximeters
 
+
   IR_Messung -= DC_IR;                                                   //Rausnahme des Mittelwertes (DC-Wertes) aus dem Infrarot-Signals
+
+
+  letztes_AC_IR = AC_IR;
 
   AC_IR = sqrt(GLATTUNG_IR * pow(IR_Messung, 2) + (1 - GLATTUNG_IR) * pow(AC_IR, 2));     //Berechnung des AC-Wertes des Infrarot-Signals
 
@@ -70,10 +87,16 @@ void loop_oxi()
 
 
   int R_Messung = Pulsoxi.getRed();                                       //Erfassen des Oxi-Infrarot-Signals
+
+  letztes_DC_R = DC_R;
   
   DC_R = (1 - GLATTUNG_R) * DC_R + GLATTUNG_R * R_Messung;                //Berechnen des DC-Wertes / Mittelwertes des Rot-Signals des Oximeters
 
+
   R_Messung -= DC_R;                                                      //Rausnahme des Mittelwertes (DC-Wertes) aus dem Rot-Signals
+
+
+  letztes_AC_R;
 
   AC_R = sqrt(GLATTUNG_R * pow(R_Messung, 2) + (1 - GLATTUNG_R) * pow(AC_R, 2));      //Berechnung des AC-Wertes des Rot-Signals
   
@@ -91,38 +114,65 @@ void loop_oxi()
   float SpO2 = (-45.06*Z + 30.354)*Z + 94.845;                          //Berechnen der Sauerstoffsätigung
 
 
+
+
+  //Konfidenzintervalle, ob Finger drauf ist
+  if((abs(DC_IR - letztes_DC_IR) <= 100) && (abs(DC_R - letztes_DC_R) <= 100) && (SpO2 > 85)) 
+    Flag_Sauerstoff_OK = true;
+  else
+    Flag_Sauerstoff_OK = false;
+
+
   Serial.print("            Z: ");                                      //
   Serial.print(Z);                                                      // DEBUGGING
   Serial.print("          SPO2: ");                                     //
   Serial.println(SpO2);                                                 //
 
 
+
   if((R_Messung < 2000) && (IR_Messung < 2000))                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
   {
     static float Bpm = 0.0;                                             //Variable, die die Bpm speichern soll
 
-    Array_R[ArrayFuellung] = R_Messung;                                 //Auffüllen des Zeichen-Arrays für die Werte des Rot-Signals
-    Array_IR[ArrayFuellung] = IR_Messung;                               //Auffüllen des Zeichen-Arrays für die Werte des Infrarot-Signals
+    Array_R[ArrayFuellung] = DC_R;                                 //Auffüllen des Zeichen-Arrays für die Werte des Rot-Signals
+    Array_IR[ArrayFuellung] = DC_IR;                               //Auffüllen des Zeichen-Arrays für die Werte des Infrarot-Signals
     ArrayFuellung++;
 
     if((R_Messung >= 1300) && (BpmFlag == 0))                           //Schauen, ob gerade ein Peak passiert
     {
-      static float DeltaT = 0;                                          //Variable, die einen Mittelwert der Zeitabstände zwischen Peaks speichert
+      static float DeltaT = 100;                                          //Variable, die einen Mittelwert der Zeitabstände zwischen Peaks speichert
       static int t1 = millis();                                         //Zeitstempelvariable, die zur Berechnung der Abstände hilft
       BpmFlag = 1;                                                      //Setzten der Flagvariable auf True
 
-      unsigned int MachtKeinenSinn = millis() - t1; 	                  //Hilfsvariable, die zur Berechnung des Delta T hilft
+      unsigned int MachtKeinenSinn_1 = millis() - t1; 	                  //Hilfsvariable, die zur Berechnung des Delta T hilft
+      float MachtKeinenSinn_2 = 0.95 * DeltaT;
+      float MachtKeinenSinn_3 = 0.05 * MachtKeinenSinn_1;
 
-      DeltaT = (0.95 * DeltaT) + (0.05 * MachtKeinenSinn);               //Berechnung, des Mittelwerts der Zeitabstände zwischen Peaks
+      DeltaT = MachtKeinenSinn_2 + MachtKeinenSinn_3;               //Berechnung, des Mittelwerts der Zeitabstände zwischen Peaks
+
       t1 = millis();                                                    //Erneuerung der Zeitstempel-Hilfsvariable
 
-      Bpm = 60000.0 / DeltaT;                                           //Berechnung der Bpm
+      if(DeltaT != 0)
+        Bpm = 60000.0 / DeltaT;                                           //Berechnung der Bpm
     }
 
     if((R_Messung <= 1300) && (BpmFlag == 1))                           //Schauen, ob der Peak vorbei ist
       BpmFlag = 0;                                                      //Setzten der Flagvariable auf False
+
     
-    snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: % .f ", SpO2, Bpm); //Reinschreiben des Textes und der Werte in das Wortarray
+    if(Flag_Sauerstoff_OK == true)
+    {
+      snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: % .f ", SpO2, Bpm); //Reinschreiben des Textes und der Werte in das Wortarray
+      digitalWrite(LEDG, LOW);
+      digitalWrite(LEDR, HIGH);
+    }
+    else
+    {
+      snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: --  Bpm: -- "); //Reinschreiben des Textes und der Werte in das Wortarray
+      digitalWrite(LEDR, LOW);
+      digitalWrite(LEDG, HIGH);
+    }
+
     LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0);                                   //Zeichnen des Wortarrays
 
 
@@ -136,15 +186,20 @@ void loop_oxi()
   {
     ArrayFuellung = 0;                                                  //Resetten der Auffüll-Variable
 
+    int Max_IR = FindMax(Array_IR);
+    int Min_IR = FindMin(Array_IR);
+    int Max_R = FindMax(Array_R);
+    int Min_R = FindMin(Array_R);
+
     for(int Pix = 0; Pix < 160; Pix++)                                  //Schleife, die die Arrays zeichnen soll
     {
       gbham(Pix, Del_IR[Pix], Pix+1, Del_IR[Pix+1], colLightBlue);      //Bresenham-Linienalgorithmus, der die Linie des Infrarot-Signals löscht
       gbham(Pix, Del_R[Pix], Pix+1, Del_R[Pix+1], colLightBlue);        //Bresenham-Linienalgorithmus, der die Linie des Rot-Signals löscht
 
-      int IR_1 = map(Array_IR[Pix], -2000, 2000, 100, 20);              //Variable, in die der erste skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
-      int IR_2 = map(Array_IR[Pix+1], -2000, 2000, 100, 20);            //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
-      int R_1 = map(Array_R[Pix], -2000, 2000, 100, 20);                //Variable, in die der erste skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
-      int R_2 = map(Array_R[Pix+1], -2000, 2000, 100, 20);              //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
+      int IR_1 = map(Array_IR[Pix], Max_IR, Min_IR, 100, 20);              //Variable, in die der erste skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
+      int IR_2 = map(Array_IR[Pix+1], Max_IR, Min_IR, 100, 20);            //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
+      int R_1 = map(Array_R[Pix], Max_R, Min_R, 100, 20);                //Variable, in die der erste skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
+      int R_2 = map(Array_R[Pix+1], Max_R, Min_R, 100, 20);              //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
 
       IR_1 = constrain(IR_1, 20, 100);                                  // 
       IR_2 = constrain(IR_2, 20, 100);                                  //Nochmalige Prüfung, ob die skalierten Werte im richtigen Rahmen liegen
@@ -164,5 +219,39 @@ void loop_oxi()
 }
 
 
+
+
+
+int FindMax(unsigned int Array[])
+{
+  unsigned int max = Array[0];
+
+  for(int i = 0; i <= BUFFER_SIZE_OXI; i++)
+  {
+    if (Array[i] > max) 
+      max = Array[i];
+  }
+    
+
+  return max;
+
+}
+
+
+
+int FindMin(unsigned int Array[])
+{
+  unsigned int min = Array[0];
+
+  for(int i = 80; i <= BUFFER_SIZE_OXI; i++)
+  {
+    if (Array[i] < min) 
+      min = Array[i];
+  }
+    
+
+  return min;
+
+}
 
 
