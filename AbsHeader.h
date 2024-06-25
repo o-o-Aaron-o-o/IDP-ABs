@@ -2,6 +2,7 @@
 
 
 #include "MAX30105.h"                 // Bibliothek für den Oxi-Sensor
+#include "heartRate.h"
 #include <math.h>
 #include "Display.h"
 

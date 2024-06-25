@@ -56,39 +56,41 @@ void setup()
 
 void loop()  
 {
-  static int Modi = 0;
-  BLEDevice central = BLE.central();
+  // static int Modi = 0;
+  // BLEDevice central = BLE.central();
 
-  if (central) 
-  {
+  // if (central) 
+  // {
 
-    Serial.print("Connected to central: ");
-    Serial.println(central.address());
+  //   Serial.print("Connected to central: ");
+  //   Serial.println(central.address());
 
-    // While the central is connected
-    while (central.connected()) 
-    {
-      if(switchSensorCharacteristic.written())
-        Modi = switchSensorCharacteristic.value();
+  //   // While the central is connected
+  //   while (central.connected()) 
+  //   {
+  //     if(switchSensorCharacteristic.written())
+  //       Modi = switchSensorCharacteristic.value();
 
 
-      switch (Modi) 
-      {
-        case 0:
-                Serial.println("Stopped");
-                break;
-        case 1:
-                loop_ekg();
-                break;
-        case 2:
-                loop_oxi();
-                break;
-        default:
-                break;
+  //     switch (Modi) 
+  //     {
+  //       case 0:
+  //               Serial.println("Stopped");
+  //               break;
+  //       case 1:
+  //               loop_ekg();
+  //               break;
+  //       case 2:
+  //               loop_oxi();
+  //               break;
+  //       default:
+  //               break;
       
-      }
+  //     }
 
-    }
-  }
+  //   }
+  // }
+
+  loop_oxi();
 
 }

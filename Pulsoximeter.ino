@@ -68,7 +68,7 @@ void loop_oxi()
   DC_IR = (1 - GLATTUNG_IR) * DC_IR + GLATTUNG_IR * IR_Messung;          //Berechnen des DC-Wertes / Mittelwertes des Infrarot-Signals des Oximeters
 
 
-  IR_Messung -= DC_IR;                                                   //Rausnahme des Mittelwertes (DC-Wertes) aus dem Infrarot-Signals
+  //IR_Messung -= DC_IR;                                                   //Rausnahme des Mittelwertes (DC-Wertes) aus dem Infrarot-Signals
 
 
   letztes_AC_IR = AC_IR;
@@ -93,7 +93,7 @@ void loop_oxi()
   DC_R = (1 - GLATTUNG_R) * DC_R + GLATTUNG_R * R_Messung;                //Berechnen des DC-Wertes / Mittelwertes des Rot-Signals des Oximeters
 
 
-  R_Messung -= DC_R;                                                      //Rausnahme des Mittelwertes (DC-Wertes) aus dem Rot-Signals
+  //R_Messung -= DC_R;                                                      //Rausnahme des Mittelwertes (DC-Wertes) aus dem Rot-Signals
 
 
   letztes_AC_R;
@@ -117,7 +117,7 @@ void loop_oxi()
 
 
   //Konfidenzintervalle, ob Finger drauf ist
-  if((abs(DC_IR - letztes_DC_IR) <= 100) && (abs(DC_R - letztes_DC_R) <= 100) && (SpO2 > 85)) 
+  if((abs(DC_IR - letztes_DC_IR) <= 100) && (abs(DC_R - letztes_DC_R) <= 100) && (SpO2 > 85) && (IR_Messung >= 50000)) 
     Flag_Sauerstoff_OK = true;
   else
     Flag_Sauerstoff_OK = false;
@@ -126,43 +126,86 @@ void loop_oxi()
   Serial.print("            Z: ");                                      //
   Serial.print(Z);                                                      // DEBUGGING
   Serial.print("          SPO2: ");                                     //
-  Serial.println(SpO2);                                                 //
+  Serial.print(SpO2);                                                 //
 
+  static const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
+  static byte rates[RATE_SIZE]; //Array of heart rates
+  static byte rateSpot = 0;
+  static long lastBeat = 0; //Time at which the last beat occurred
 
+  static float beatsPerMinute;
+  static int beatAvg;
 
-  if((R_Messung < 2000) && (IR_Messung < 2000))                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
+  if(Flag_Sauerstoff_OK == true)                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
   {
     static float Bpm = 0.0;                                             //Variable, die die Bpm speichern soll
 
-    Array_R[ArrayFuellung] = DC_R;                                 //Auffüllen des Zeichen-Arrays für die Werte des Rot-Signals
-    Array_IR[ArrayFuellung] = DC_IR;                               //Auffüllen des Zeichen-Arrays für die Werte des Infrarot-Signals
+    Array_R[ArrayFuellung] = R_Messung;//DC_R;                                 //Auffüllen des Zeichen-Arrays für die Werte des Rot-Signals
+    Array_IR[ArrayFuellung] = IR_Messung;//DC_IR;                               //Auffüllen des Zeichen-Arrays für die Werte des Infrarot-Signals
     ArrayFuellung++;
 
-    if((R_Messung >= 1300) && (BpmFlag == 0))                           //Schauen, ob gerade ein Peak passiert
+    // if((R_Messung >= 1300) && (BpmFlag == 0))                           //Schauen, ob gerade ein Peak passiert
+    // {
+    //   static float DeltaT = 100;                                          //Variable, die einen Mittelwert der Zeitabstände zwischen Peaks speichert
+    //   static int t1 = millis();                                         //Zeitstempelvariable, die zur Berechnung der Abstände hilft
+    //   BpmFlag = 1;                                                      //Setzten der Flagvariable auf True
+
+    //   unsigned int MachtKeinenSinn_1 = millis() - t1; 	                  //Hilfsvariable, die zur Berechnung des Delta T hilft
+    //   float MachtKeinenSinn_2 = 0.95 * DeltaT;
+    //   float MachtKeinenSinn_3 = 0.05 * MachtKeinenSinn_1;
+
+    //   DeltaT = MachtKeinenSinn_2 + MachtKeinenSinn_3;               //Berechnung, des Mittelwerts der Zeitabstände zwischen Peaks
+
+    //   t1 = millis();                                                    //Erneuerung der Zeitstempel-Hilfsvariable
+
+    //   if(DeltaT != 0)
+    //     Bpm = 60000.0 / DeltaT;                                           //Berechnung der Bpm
+    // }
+
+    // if((R_Messung <= 1300) && (BpmFlag == 1))                           //Schauen, ob der Peak vorbei ist
+    //   BpmFlag = 0;                                                      //Setzten der Flagvariable auf False
+
+  
+
+
+
+
+    if (checkForBeat(IR_Messung) == true)
     {
-      static float DeltaT = 100;                                          //Variable, die einen Mittelwert der Zeitabstände zwischen Peaks speichert
-      static int t1 = millis();                                         //Zeitstempelvariable, die zur Berechnung der Abstände hilft
-      BpmFlag = 1;                                                      //Setzten der Flagvariable auf True
+      //We sensed a beat!
+      long delta = millis() - lastBeat;
+      lastBeat = millis();
 
-      unsigned int MachtKeinenSinn_1 = millis() - t1; 	                  //Hilfsvariable, die zur Berechnung des Delta T hilft
-      float MachtKeinenSinn_2 = 0.95 * DeltaT;
-      float MachtKeinenSinn_3 = 0.05 * MachtKeinenSinn_1;
+      beatsPerMinute = 60 / (delta / 1000.0);
 
-      DeltaT = MachtKeinenSinn_2 + MachtKeinenSinn_3;               //Berechnung, des Mittelwerts der Zeitabstände zwischen Peaks
+      if (beatsPerMinute < 255 && beatsPerMinute > 20)
+      {
+        rates[rateSpot++] = (byte)beatsPerMinute; //Store this reading in the array
+        rateSpot %= RATE_SIZE; //Wrap variable
 
-      t1 = millis();                                                    //Erneuerung der Zeitstempel-Hilfsvariable
-
-      if(DeltaT != 0)
-        Bpm = 60000.0 / DeltaT;                                           //Berechnung der Bpm
+        //Take average of readings
+        beatAvg = 0;
+        for (byte x = 0 ; x < RATE_SIZE ; x++)
+          beatAvg += rates[x];
+        beatAvg /= RATE_SIZE;
+      }
     }
+  }
 
-    if((R_Messung <= 1300) && (BpmFlag == 1))                           //Schauen, ob der Peak vorbei ist
-      BpmFlag = 0;                                                      //Setzten der Flagvariable auf False
 
-    
+  // Serial.print("IR=");
+  // Serial.print(irValue);
+  Serial.print("       BPM: ");
+  Serial.print(beatsPerMinute);
+  Serial.print("    Avg BPM: ");
+  Serial.println(beatAvg);
+
+
+
+
     if(Flag_Sauerstoff_OK == true)
     {
-      snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: % .f ", SpO2, Bpm); //Reinschreiben des Textes und der Werte in das Wortarray
+     // snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: % .f ", SpO2, Bpm); //Reinschreiben des Textes und der Werte in das Wortarray
       digitalWrite(LEDG, LOW);
       digitalWrite(LEDR, HIGH);
     }
@@ -176,35 +219,37 @@ void loop_oxi()
     LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0);                                   //Zeichnen des Wortarrays
 
 
-  }
 
 
 
+
+
+  int Max_IR = FindMax(Array_IR);
+  int Min_IR = FindMin(Array_IR);
+  int Max_R = FindMax(Array_R);
+  int Min_R = FindMin(Array_R);
 
 
   if(ArrayFuellung >= 159)                                              //Schauen, ob die Zeichen-Array aufgefüllt wurden
   {
     ArrayFuellung = 0;                                                  //Resetten der Auffüll-Variable
 
-    int Max_IR = FindMax(Array_IR);
-    int Min_IR = FindMin(Array_IR);
-    int Max_R = FindMax(Array_R);
-    int Min_R = FindMin(Array_R);
+
 
     for(int Pix = 0; Pix < 160; Pix++)                                  //Schleife, die die Arrays zeichnen soll
     {
       gbham(Pix, Del_IR[Pix], Pix+1, Del_IR[Pix+1], colLightBlue);      //Bresenham-Linienalgorithmus, der die Linie des Infrarot-Signals löscht
       gbham(Pix, Del_R[Pix], Pix+1, Del_R[Pix+1], colLightBlue);        //Bresenham-Linienalgorithmus, der die Linie des Rot-Signals löscht
 
-      int IR_1 = map(Array_IR[Pix], Max_IR, Min_IR, 100, 20);              //Variable, in die der erste skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
-      int IR_2 = map(Array_IR[Pix+1], Max_IR, Min_IR, 100, 20);            //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
-      int R_1 = map(Array_R[Pix], Max_R, Min_R, 100, 20);                //Variable, in die der erste skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
-      int R_2 = map(Array_R[Pix+1], Max_R, Min_R, 100, 20);              //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
+      int IR_1 = map(Array_IR[Pix], Max_IR, Min_IR, 100, 0);              //Variable, in die der erste skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
+      int IR_2 = map(Array_IR[Pix+1], Max_IR, Min_IR, 100, 0);            //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Infrarot-Signals gespeichert wird 
+      int R_1 = map(Array_R[Pix], Max_R, Min_R, 100, 0);                //Variable, in die der erste skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
+      int R_2 = map(Array_R[Pix+1], Max_R, Min_R, 100, 0);              //Variable, in die der zweite skalierte Wert für die Linienzeichnung des Rot-Signals gespeichert wird 
 
-      IR_1 = constrain(IR_1, 20, 100);                                  // 
-      IR_2 = constrain(IR_2, 20, 100);                                  //Nochmalige Prüfung, ob die skalierten Werte im richtigen Rahmen liegen
-      R_1 = constrain(R_1, 20, 100);                                    //
-      R_2 = constrain(R_2, 20, 100);                                    //
+      IR_1 = constrain(IR_1, 0, 100);                                  // 
+      IR_2 = constrain(IR_2, 0, 100);                                  //Nochmalige Prüfung, ob die skalierten Werte im richtigen Rahmen liegen
+      R_1 = constrain(R_1, 0, 100);                                    //
+      R_2 = constrain(R_2, 0, 100);                                    //
       
 
       Del_IR[Pix] = IR_1;                                               //Speichern des gezeichneten Werts, in das Lösch-Array des Infrarot-Signals
