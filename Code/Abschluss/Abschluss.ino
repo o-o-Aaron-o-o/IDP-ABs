@@ -58,7 +58,7 @@ void loop()
     Serial.print("Connected to central: ");
     Serial.println(central.address());
 
-    while (central.connected())                       //While-Schleife, die der loop ist solange das Arduino-Board mit einem Central-Gerät verbunden ist
+    while (central.connected())                               //While-Schleife, die der loop ist solange das Arduino-Board mit einem Central-Gerät verbunden ist
     {
       if(switchSensorCharacteristic.written())
         Modus = switchSensorCharacteristic.value();
