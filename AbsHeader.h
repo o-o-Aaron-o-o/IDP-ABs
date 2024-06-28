@@ -3,8 +3,15 @@
 
 #include "MAX30105.h"                 // Bibliothek für den Oxi-Sensor
 #include "heartRate.h"
+
 #include <math.h>
+
 #include "Display.h"
+#include "pitches.h"
+
+#include <ArduinoBLE.h>
+
+
 
 MAX30105 Pulsoxi;                    //Wichtig für das Pulsoximeter
 
@@ -36,18 +43,18 @@ MAX30105 Pulsoxi;                    //Wichtig für das Pulsoximeter
 
 
 
-
+void BLE_Init();
 
 void EKG_Init();
 
 void loop_ekg();
 
 
-unsigned int FindMaxPosition(unsigned int Array[]);
+unsigned int Max_Position(unsigned int Array[]);
 
-unsigned int FindMinPosition(unsigned int Array[]);
+unsigned int Min_Position(unsigned int Array[]);
 
-unsigned int Average_and_Scaling();
+unsigned int Mittelwert_Messwerte();
 
 
 

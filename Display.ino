@@ -3,6 +3,19 @@
 #include "fonts.h"
 #include "small_fonts.h"
 
+
+
+void Display_Init(int Background_Color)
+{
+  SPI.begin();                                                          // Display ist Commandobereit
+
+  SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));     // Wie Serial.beginn fürs Display
+  ST7735_Init();
+
+  FillWithColor(Background_Color);
+}
+
+
 void ST7735_WriteCommand(int i)
 {
   digitalWrite(Pin_CS, LOW); //Pin für die CS - Leitung
@@ -454,8 +467,6 @@ void LCD_WriteLetter(unsigned short xpos, unsigned short ypos, unsigned char let
 
 
 
-
-// char Hallo[] = {'H', 'a', 'l', 'l', 'o'};
 
 
 void LCD_WriteString(char string[], unsigned int x, unsigned int y, unsigned int txtcolor, unsigned int txtbackcolor, unsigned char scale)

@@ -1,6 +1,6 @@
 #include "pins_arduino.h"
 /* File: _idp_ST7735.h
- * Author: Georg Passig, based on Code from Armstrong Subero, modified from Adafruit Libraries and expanded by the Authors of Modiwechsel.ino
+ * Author: Georg Passig, based on Code from Armstrong Subero, modified from Adafruit Libraries and expanded by the Authors of Abschluss.ino
  * uC:  Arduino nano 33 BLE
  * Created May 26th, 2020
  * Fully modified January 18th, 2024
@@ -126,6 +126,9 @@ void ST7735_WriteData(int i);
 
 
 void ST7735_WriteData16(int i);
+
+
+void Display_Init();
 
 
 void ST7735_Init(void);

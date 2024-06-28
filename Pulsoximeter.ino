@@ -1,11 +1,11 @@
 
-  // Hardware Connections (Breakoutboard to Arduino):
-  // -5V = 5V (3.3V is allowed)
+// Hardware Connections (Breakoutboard to Arduino):
+/*// -5V = 5V (3.3V is allowed)
   // -GND = GND
   // -SDA = A4 (or SDA)
   // -SCL = A5 (or SCL)
   // -INT = Not connected
-
+*/
 
 
 
@@ -38,13 +38,13 @@ void Oxi_Init()
 
 void loop_oxi() 
 {
-  static int Array_IR[BUFFER_SIZE_OXI] = {0}, Array_R[BUFFER_SIZE_OXI] = {0};          //Arrays, die für das Zeichnen der Sensordaten genutzt werden 
-  static int Del_IR[BUFFER_SIZE_OXI] = {0}, Del_R[BUFFER_SIZE_OXI] = {0};              //Arrays, die für das Löschen der Zeichnung der Sensordaten genutzt werden 
+  //static int Array_IR[BUFFER_SIZE_OXI] = {0}, Array_R[BUFFER_SIZE_OXI] = {0};//Arrays, die für das Zeichnen der Sensordaten genutzt werden 
+  //static int Del_IR[BUFFER_SIZE_OXI] = {0}, Del_R[BUFFER_SIZE_OXI] = {0};    //Arrays, die für das Löschen der Zeichnung der Sensordaten genutzt werden 
 
-  static float DC_IR = 0.0, DC_R = 0.0;                                  //Variablen für die DC-Anteile des Oxi-Signals
-  static float AC_IR = 0.0, AC_R = 0.0, Z = 1.00;                        //Variablen für die DC-Anteile des Oxi-Signals und die Z - Zwischenwertvariable für die Formel der Sauerstoffsätigung
-  static int BpmFlag = 0;                                                //Variable, die bei der Peakdetection hilft
-  static int ArrayFuellung = 0;                                       //Variabe, die zählt wie weit die Zeichen-arrays aufgefüllt sind                                          
+  static float DC_IR = 0.0, DC_R = 0.0;                                     //Variablen für die DC-Anteile des Oxi-Signals
+  static float AC_IR = 0.0, AC_R = 0.0, Z = 1.00;                           //Variablen für die DC-Anteile des Oxi-Signals und die Z - Zwischenwertvariable für die Formel der Sauerstoffsätigung
+  static int BpmFlag = 0;                                                   //Variable, die bei der Peakdetection hilft
+  static int ArrayFuellung = 0;                                             //Variabe, die zählt wie weit die Zeichen-arrays aufgefüllt sind                                          
 
 
 
@@ -56,64 +56,63 @@ void loop_oxi()
 
 
 
-  static char SauerstoffsaettigungsBuchstaben[50] = {0};                 //Array, womit die SpO2- und Bpm-Daten auf dem Display ausgegeben werden  
+  static char SauerstoffsaettigungsBuchstaben[50] = {0};                    //Array, womit die SpO2- und Bpm-Daten auf dem Display ausgegeben werden  
 
 
 
 
 
-  int IR_Messung = Pulsoxi.getIR();                                      //Erfassen des Oxi-Infrarot-Signals
+  int IR_Messung = Pulsoxi.getIR();                                         //Erfassen des Oxi-Infrarot-Signals
 
   letztes_DC_IR = DC_IR;
 
-  DC_IR = (1 - GLATTUNG_IR) * DC_IR + GLATTUNG_IR * IR_Messung;          //Berechnen des DC-Wertes / Mittelwertes des Infrarot-Signals des Oximeters
+  DC_IR = (1 - GLATTUNG_IR) * DC_IR + GLATTUNG_IR * IR_Messung;             //Berechnen des DC-Wertes / Mittelwertes des Infrarot-Signals des Oximeters
 
 
-  IR_Messung -= DC_IR;                                                   //Rausnahme des Mittelwertes (DC-Wertes) aus dem Infrarot-Signals
+  IR_Messung -= DC_IR;                                                      //Rausnahme des Mittelwertes (DC-Wertes) aus dem Infrarot-Signals
 
 
   letztes_AC_IR = AC_IR;
 
-  AC_IR = sqrt(GLATTUNG_IR * pow(IR_Messung, 2) + (1 - GLATTUNG_IR) * pow(AC_IR, 2));     //Berechnung des AC-Wertes des Infrarot-Signals
+  AC_IR = sqrt(GLATTUNG_IR * pow(IR_Messung, 2) + (1 - GLATTUNG_IR) * pow(AC_IR, 2));//Berechnung des AC-Wertes des Infrarot-Signals
 
 
-  Serial.print(" RohIR:");  	                                            //
-  Serial.print(IR_Messung);                                               //
-  Serial.print(" DCIR:");                                                 //
-  Serial.print(DC_IR);                                                    // DEBUGGING
-  Serial.print(" ACIR:");                                                 //
-  Serial.print(AC_IR);                                                    //
+  Serial.print(" RohIR:");  	                                              //
+  Serial.print(IR_Messung);                                                 //
+  Serial.print(" DCIR:");                                                   //
+  Serial.print(DC_IR);                                                      // DEBUGGING
+  Serial.print(" ACIR:");                                                   //
+  Serial.print(AC_IR);                                                      //
 
 
 
 
-  int R_Messung = Pulsoxi.getRed();                                       //Erfassen des Oxi-Infrarot-Signals
+  int R_Messung = Pulsoxi.getRed();                                         //Erfassen des Oxi-Infrarot-Signals
 
   letztes_DC_R = DC_R;
   
-  DC_R = (1 - GLATTUNG_R) * DC_R + GLATTUNG_R * R_Messung;                //Berechnen des DC-Wertes / Mittelwertes des Rot-Signals des Oximeters
+  DC_R = (1 - GLATTUNG_R) * DC_R + GLATTUNG_R * R_Messung;                  //Berechnen des DC-Wertes / Mittelwertes des Rot-Signals des Oximeters
 
 
-  R_Messung -= DC_R;                                                      //Rausnahme des Mittelwertes (DC-Wertes) aus dem Rot-Signals
+  R_Messung -= DC_R;                                                        //Rausnahme des Mittelwertes (DC-Wertes) aus dem Rot-Signals
 
 
   letztes_AC_R;
 
-  AC_R = sqrt(GLATTUNG_R * pow(R_Messung, 2) + (1 - GLATTUNG_R) * pow(AC_R, 2));      //Berechnung des AC-Wertes des Rot-Signals
+  AC_R = sqrt(GLATTUNG_R * pow(R_Messung, 2) + (1 - GLATTUNG_R) * pow(AC_R, 2));//Berechnung des AC-Wertes des Rot-Signals
   
  
-  Serial.print(" RohR:");  	                                            //
-  Serial.print(R_Messung);   	                                          //
-  Serial.print(" DCR:");  	                                            //
-  Serial.print(DC_R);  	                                                // DEBUGGING
-  Serial.print(" ACR:");  	                                            //
-  Serial.print(AC_R);  	                                                //
+  Serial.print(" RohR:");  	                                                //
+  Serial.print(R_Messung);   	                                              //
+  Serial.print(" DCR:");  	                                                //
+  Serial.print(DC_R);  	                                                    // DEBUGGING
+  Serial.print(" ACR:");  	                                                //
+  Serial.print(AC_R);  	                                                    //
 
   if((AC_R * DC_IR) != 0) 
-    Z = (AC_IR * DC_R) / (AC_R * DC_IR);                                                //Berechnung des Z-Wertes für die Formel der Sauerstoffsättigung
+    Z = (AC_IR * DC_R) / (AC_R * DC_IR);                                    //Berechnung des Z-Wertes für die Formel der Sauerstoffsättigung
 
-  float SpO2 = (-45.06*Z + 30.354)*Z + 94.845;                          //Berechnen der Sauerstoffsätigung
-
+  float SpO2 = (-45.06*Z + 30.354)*Z + 94.845;                              //Berechnen der Sauerstoffsätigung
 
 
 
@@ -124,23 +123,14 @@ void loop_oxi()
     Flag_Sauerstoff_OK = false;
 
 
-  Serial.print("            Z: ");                                      //
-  Serial.print(Z);                                                      // DEBUGGING
-  Serial.print("          SPO2: ");                                     //
-  Serial.print(SpO2);                                                 //
-
-  static const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
-  static byte rates[RATE_SIZE]; //Array of heart rates
-  static byte rateSpot = 0;
-  static long lastBeat = 0; //Time at which the last beat occurred
-
-  static float beatsPerMinute = 0.0;
-  static int beatAvg = 0;
+  Serial.print("            Z: ");                                          //
+  Serial.print(Z);                                                          // DEBUGGING
+  Serial.print("          SPO2: ");                                         //
+  Serial.print(SpO2);                                                       //
 
 
 
-
-  if(Flag_Sauerstoff_OK)                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
+  if(Flag_Sauerstoff_OK)                                                    //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
   {
 
 
@@ -148,14 +138,8 @@ void loop_oxi()
     Line_Red(DC_R);
 
 
-    // if(checkForBeat(IR_Messung + DC_IR))
-    //   tone(PEEP, 3000, 300);
-
     // BPM !!!!!!!!!
-    // Serial.print("       BPM: ");
-    // Serial.print(beatsPerMinute);
-    // Serial.print("    Avg BPM: ");
-    // Serial.print(beatAvg);
+
 
 
   }
@@ -175,7 +159,7 @@ void loop_oxi()
     digitalWrite(LEDG, HIGH);
   }
 
-  LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0);                                   //Zeichnen des Wortarrays
+  LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0); //Zeichnen des Wortarrays
 
 
   
@@ -189,41 +173,41 @@ void loop_oxi()
 
 
 
-
-
-int FindMax(int maxArray[])
-{
-  int maximum = maxArray[0];
-
-  for(int i = 1; i < BUFFER_SIZE_OXI; i++)
+//Hier Max und Min Funktion
+/*
+  int FindMax(int maxArray[])
   {
-    if (maxArray[i] > maximum) 
-      maximum = maxArray[i];
+    int maximum = maxArray[0];
+
+    for(int i = 1; i < BUFFER_SIZE_OXI; i++)
+    {
+      if (maxArray[i] > maximum) 
+        maximum = maxArray[i];
+    }
+      
+
+    return maximum;
+
   }
-    
-
-  return maximum;
-
-}
 
 
 
-int FindMin(int minArray[])
-{
-  int minimum = minArray[0];
-
-  for(int j = 1; j < BUFFER_SIZE_OXI; j++)
+  int FindMin(int minArray[])
   {
-    if (minArray[j] <= minimum) 
-      minimum = minArray[j];
+    int minimum = minArray[0];
+
+    for(int j = 1; j < BUFFER_SIZE_OXI; j++)
+    {
+      if (minArray[j] <= minimum) 
+        minimum = minArray[j];
+    }
+      
+
+    return minimum;
+
   }
-    
 
-  return minimum;
-
-}
-
-
+*/
 
 
 

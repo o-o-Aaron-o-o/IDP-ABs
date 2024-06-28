@@ -1,9 +1,27 @@
+/* Program: Abschluss.ino including EKG.ino, Pulsoximeter.ino, Display.ino, Display.h, AbsHeader.h, fonts.h and small_fonts_h
+ * Authors: Lucia Risuglia, Aaron Venter, Nadine Roth, Jazli Hyzan -- based on Code from Georg Passig
+ * uC:  Arduino nano 33 BLE
+ * Created July 22nd, 2024
+ *
+ * Geleistete Arbeit am Gesamtprojekt:  Nadine Roth:    25 %
+ *                                      Jazli Hyzan:    25 %
+ *                                      Lucia Risuglia: 25 %
+ *                                      Aaron Venter:   25 %
+ *
+ *
+ * Das Projekt wurde nicht von einer Einzelperson bearbeitet.  
+ */
+
+
+
 
 #include "Display.h"
 #include "AbsHeader.h"
-#include <ArduinoBLE.h>
 
-BLEService Modiwechsel("C89C");
+
+
+
+BLEService Moduswechsel("C89C");
 
 BLEIntCharacteristic switchSensorCharacteristic("FAF3", BLEWrite |  BLEWriteWithoutResponse);
 
@@ -15,40 +33,13 @@ void setup()
 {
   Serial.begin(115200);
 
-
-  SPI.begin();                                                          // Display ist Commandobereit
-
-  SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));     // Wie Serial.beginn fürs Display
-  ST7735_Init();
-
-  // Begin initialization
-  if (!BLE.begin()) 
-  {
-    Serial.println("Starting BLE failed!");
-    while (1);
-  }
-  
-  BLE.setLocalName("My-Little-Pony");
-
-  BLE.setAdvertisedService(Modiwechsel);
-
-  Modiwechsel.addCharacteristic(switchSensorCharacteristic);
-
-  BLE.addService(Modiwechsel);
-
-  BLE.advertise();
-
-
-
-
   EKG_Init();
 
   Oxi_Init();
 
-  FillWithColor(colLightBlue);
+  Display_Init(colLightBlue);
 
-  Serial.println("Waiting for connections...");
-
+  BLE_Init();
 }
 
 
@@ -58,7 +49,7 @@ void setup()
 
 void loop()  
 {
-  static int Modi = 0;
+  static int Modus = 0;
   BLEDevice central = BLE.central();
 
   if (central) 
@@ -67,14 +58,13 @@ void loop()
     Serial.print("Connected to central: ");
     Serial.println(central.address());
 
-    // While the central is connected
-    while (central.connected()) 
+    while (central.connected())                       //While-Schleife, die der loop ist solange das Arduino-Board mit einem Central-Gerät verbunden ist
     {
       if(switchSensorCharacteristic.written())
-        Modi = switchSensorCharacteristic.value();
+        Modus = switchSensorCharacteristic.value();
 
 
-      switch (Modi) 
+      switch(Modus) 
       {
         case 0:
                 Serial.println("Stopped");
@@ -95,10 +85,28 @@ void loop()
 }
 
 
-   //loop_ekg();
-  // loop_oxi();
 
+void BLE_Init()
+{
+  // Begin initialization
+  if (!BLE.begin()) 
+  {
+    Serial.println("Starting BLE failed!");
+    while (1);
+  }
+  
+  BLE.setLocalName("My-Little-Pony");
 
+  BLE.setAdvertisedService(Moduswechsel);
+
+  Moduswechsel.addCharacteristic(switchSensorCharacteristic);
+
+  BLE.addService(Moduswechsel);
+
+  BLE.advertise();
+
+  Serial.println("Waiting for connections...");
+}
 
 
 
