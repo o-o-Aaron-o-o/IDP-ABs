@@ -60,6 +60,8 @@ void loop_oxi();
 
 
 
+void Line_IRed(int hi);
+void Line_Red(int hi);
 
 
 

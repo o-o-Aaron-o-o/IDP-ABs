@@ -38,7 +38,7 @@ void Oxi_Init()
 
 void loop_oxi() 
 {
-  static int Array_IR[BUFFER_SIZE_OXI] = {0}, Array_R[BUFFER_SIZE_OXI] = {0};          //Arrays, die für das Zeichnen der Sensordaten genutzt werden 
+  
   static int Del_IR[BUFFER_SIZE_OXI] = {0}, Del_R[BUFFER_SIZE_OXI] = {0};              //Arrays, die für das Löschen der Zeichnung der Sensordaten genutzt werden 
 
   static float DC_IR = 0.0, DC_R = 0.0;                                  //Variablen für die DC-Anteile des Oxi-Signals
@@ -50,6 +50,13 @@ void loop_oxi()
 
   float letztes_DC_IR = 0.0, letztes_DC_R = 0.0;                                  
   float letztes_AC_IR = 0.0, letztes_AC_R = 0.0;
+  
+  
+  static int Max_IR = 190000;
+  static int Min_IR = 185000;
+  static int Max_R = 210000;
+  static int Min_R = 190000;
+
 
 
   bool Flag_Sauerstoff_OK = false;
@@ -140,42 +147,11 @@ void loop_oxi()
 
 
 
-  if(Flag_Sauerstoff_OK)                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
+  if(Flag_Sauerstoff_OK == true)                         //Schauen ob die Signalwerte in einem logischen Rahmen, für die Berechnung der Bpm und der Zeichnung sind
   {
 
-
-    //Line_IRed(DC_IR);
-    Line_Red(DC_R);
-
-
-    // if(checkForBeat(IR_Messung + DC_IR))
-    //   tone(PEEP, 3000, 300);
-
-    // BPM !!!!!!!!!
-    // Serial.print("       BPM: ");
-    // Serial.print(beatsPerMinute);
-    // Serial.print("    Avg BPM: ");
-    // Serial.print(beatAvg);
-
-
-  }
-
-
-
-  if(Flag_Sauerstoff_OK)
-  {
-    snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: -- ", SpO2); //Reinschreiben des Textes und der Werte in das Wortarray
-    digitalWrite(LEDG, LOW);
-    digitalWrite(LEDR, HIGH);
-  }
-  else
-  {
-    snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: --  Bpm: -- "); //Reinschreiben des Textes und der Werte in das Wortarray
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDG, HIGH);
-  }
-
-  LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0);                                   //Zeichnen des Wortarrays
+	Line_IR(DC_IR);
+	Line_R(DC_R);
 
 
   
@@ -183,9 +159,71 @@ void loop_oxi()
 
 
 
+    if (checkForBeat(IR_Messung + DC_IR) == true)
+    {
+      //We sensed a beat!
+      long delta = millis() - lastBeat;
+      lastBeat = millis();
 
-  Serial.println();
+      beatsPerMinute = 60 / (delta / 1000.0);
+
+      if (beatsPerMinute < 255 && beatsPerMinute > 20)
+      {
+        rates[rateSpot++] = (byte)beatsPerMinute; //Store this reading in the array
+        rateSpot %= RATE_SIZE; //Wrap variable
+
+        //Take average of readings
+        beatAvg = 0;
+        for (byte x = 0 ; x < RATE_SIZE ; x++)
+          beatAvg += rates[x];
+        beatAvg /= RATE_SIZE;
+      }
+    }
+  }
+
+
+  Serial.print("       BPM: ");
+  Serial.print(beatsPerMinute);
+  Serial.print("    Avg BPM: ");
+  Serial.println(beatAvg);
+
+
+
+
+    if(Flag_Sauerstoff_OK == true)
+    {
+      snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: % .1f  Bpm: -- ", SpO2); //Reinschreiben des Textes und der Werte in das Wortarray
+      digitalWrite(LEDG, LOW);
+      digitalWrite(LEDR, HIGH);
+    }
+    else
+    {
+      snprintf(SauerstoffsaettigungsBuchstaben, sizeof(SauerstoffsaettigungsBuchstaben), "SpO2: --  Bpm: -- "); //Reinschreiben des Textes und der Werte in das Wortarray
+      digitalWrite(LEDR, LOW);
+      digitalWrite(LEDG, HIGH);
+    }
+
+    LCD_WriteString(SauerstoffsaettigungsBuchstaben, 10, 110, colViolett, colLightBlue, 0);                                   //Zeichnen des Wortarrays
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -228,80 +266,92 @@ int FindMin(int minArray[])
 
 
 
-void Line_IRed(int hi)
+
+
+void Line_R()
 {
-    static int MaX = hi + 4500;
-    static int MiN = hi - 4500;
-    static int del[160] = {50};   // Used to save the drawn values, in order to reuse them for the deletion of the last drawn line
-    static int counter = 0;
-    static int lastPixel = 50;
-
-    if (hi > MaX)
-    {
-        MiN = MiN + (hi - MaX);
-        MaX = hi;
-    }
+static int MaX = 200300;
+	
+	
+  if(hi > MaX)
+  {
+	  MiN = MiN + (hi - MaX);
+	  MaX = hi;
+  }
   
-    if (hi < MiN)
-    {
-        MaX = MaX - (MiN - hi);
-        MiN = hi;
-    }
+  
+	static int MiN = 200000;
+	
+	
+  if(hi < MiN)
+  {
+	  MaX = MaX - (MiN - hi);
+	  MiN = hi;
 
-
-    gbham(counter, del[counter], counter + 1, del[counter + 1], colLightBlue);
-
-
-
-    int Pixel1 = map(hi, MiN, MaX, 100, 0);
-
-    gbham(counter, lastPixel, counter + 1, Pixel1, colBlack);
-
-    del[counter+1] = Pixel1;
-    del[counter] = lastPixel;
-    lastPixel = Pixel1;
-
-    counter = (counter + 1) % 159;
+  }
+	static int del[160] = {0};
+	static int counter = 0;
+	static int lastPixel = 50;
+	
+	gbham(counter, del[counter], counter + 1, del[counter + 1], colLightBlue);
+	
+	
+	int Pixel1 = map(hi, MiN, MaX, 100, 0);
+	
+	gbham(counter, lastPixel, counter + 1, Pixel1, colBlack);
+	
+	del[counter] = Pixel1;
+  lastPixel = Pixel1;
+	
+	counter++;
+	
+	if(counter >= 158)
+		counter = 0;
 
 }
 
 
-void Line_Red(int hi)
+
+
+void Line_IR(int hi)
 {
-    static int MaX = hi + 4500;
-    static int MiN = hi - 4500;
-    static int del[160] = {50};   // Used to save the drawn values, in order to reuse them for the deletion of the last drawn line
-    static int counter = 0;
-    static int lastPixel = 50;
-
-    if (hi > MaX)
-    {
-        MiN = MiN + (hi - MaX);
-        MaX = hi;
-    }
+	static int MaX = 200300;
+	
+	
+  if(hi > MaX)
+  {
+	  MiN = MiN + (hi - MaX);
+	  MaX = hi;
+  }
   
-    if (hi < MiN)
-    {
-        MaX = MaX - (MiN - hi);
-        MiN = hi;
-    }
+  
+	static int MiN = 200000;
+	
+	
+  if(hi < MiN)
+  {
+	  MaX = MaX - (MiN - hi);
+	  MiN = hi;
 
-
-    gbham(counter, del[counter], counter + 1, del[counter + 1], colLightBlue);
-
-
-
-    int Pixel1 = map(hi, MiN, MaX, 100, 0);
-
-    gbham(counter, lastPixel, counter + 1, Pixel1, colBlack);
-
-    del[counter+1] = Pixel1;
-    del[counter] = lastPixel;
-    lastPixel = Pixel1;
-
-    counter = (counter + 1) % 159;
+  }
+	static int del[160] = {0};
+	static int counter = 0;
+	static int lastPixel = 50;
+	
+	gbham(counter, del[counter], counter + 1, del[counter + 1], colLightBlue);
+	
+	
+	int Pixel1 = map(hi, MiN, MaX, 100, 0);
+	
+	gbham(counter, lastPixel, counter + 1, Pixel1, colBlack);
+	
+	del[counter] = Pixel1;
+  lastPixel = Pixel1;
+	
+	counter++;
+	
+	if(counter >= 158)
+		counter = 0;
+	
 }
-
-
-
 

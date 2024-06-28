@@ -31,7 +31,6 @@ void EKG_Init()
 void loop_ekg() 
 {
   
-  static char ecg[] = "This is your ECG - Reading";
   char Bpm[50] = {0};
   
   static unsigned int ECG_Measurements[BUFFER_SIZE_EKG] = {0};
@@ -144,9 +143,7 @@ void loop_ekg()
 
     // }
 
-    snprintf(Bpm, sizeof(Bpm), "  Your Pulse: % .1f Bpm", bpm);
-
-    LCD_WriteString(ecg, 2, 10, colViolett, colLightBlue, 0);
+    snprintf(Bpm, sizeof(Bpm), "% .1f Bpm", bpm);
 
 
     field = FindMaxPosition(ECG_Measurements);                                                  // Find the QRS Complex / the location of the max value
@@ -193,7 +190,7 @@ void loop_ekg()
 
   	
     
-    LCD_WriteString(Bpm, 2, 118, colViolett, colLightBlue, 0);
+    LCD_WriteString(Bpm, 90, 12, colViolett, colLightBlue, 0);
     
     delay(900);
 
