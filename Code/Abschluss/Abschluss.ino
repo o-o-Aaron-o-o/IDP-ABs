@@ -50,11 +50,12 @@ void setup()
 void loop()  
 {
   static int Modus = 0;
+  static int lastModus = 0;
   BLEDevice central = BLE.central();
 
   if (central) 
   {
-
+    
     Serial.print("Connected to central: ");
     Serial.println(central.address());
 
@@ -63,6 +64,8 @@ void loop()
       if(switchSensorCharacteristic.written())
         Modus = switchSensorCharacteristic.value();
 
+      if(lastModus != Modus)
+        	FillWithColor(colLightBlue);
 
       switch(Modus) 
       {
@@ -79,6 +82,8 @@ void loop()
                 break;
       
       }
+
+      lastModus = Modus;
 
     }
   }

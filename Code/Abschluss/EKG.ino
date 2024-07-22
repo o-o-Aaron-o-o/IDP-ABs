@@ -175,7 +175,7 @@ void loop_ekg()
 
     LCD_WriteString(Bpm, 90, 12, colViolett, colLightBlue, 0);                //Schreiben des Inhalts vom 'Bpm'-Array auf das Display
     
-    //delay(900);                                                             //Verzögerung von 900ms
+    delay(900);                                                             //Verzögerung von 900ms
 
 
   }
